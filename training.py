@@ -22,8 +22,9 @@ def save_churn_model(
     pipeline: Pipeline,
     metrics: dict[str, float],
     config: TrainingConfigChurn,
-    path: Path = MODEL_PATH,
+    path: Path | None = None,
 ) -> dict:
+    path = path or MODEL_PATH
     bundle = {
         "pipeline": pipeline,
         "trained_at": datetime.now(timezone.utc),
@@ -36,7 +37,8 @@ def save_churn_model(
     return bundle
 
 
-def load_churn_model(path: Path = MODEL_PATH) -> dict | None:
+def load_churn_model(path: Path | None = None) -> dict | None:
+    path = path or MODEL_PATH
     if not path.exists():
         return None
 
