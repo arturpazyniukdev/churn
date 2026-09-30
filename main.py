@@ -8,11 +8,12 @@ from models import (
     DatasetRowChurn,
     FeatureVectorChurn,
     ModelStatus,
+    PredictionResponseChurn,
     SplitInfo,
     TrainResult,
 )
 from preprocessing import prepare_data, split_data, to_dataframe
-from training import evaluate, load_churn_model, save_churn_model, train_churn_model
+from training import evaluate, load_churn_model, predict_churn, save_churn_model, train_churn_model
 
 app = FastAPI()
 
@@ -29,11 +30,6 @@ def ensure_dataset() -> None:
 @app.get("/")
 def root():
     return {"message": "ml churn service is running"}
-
-
-@app.post("/predict")
-def predict(data: FeatureVectorChurn) -> FeatureVectorChurn:
-    return data
 
 
 @app.get("/dataset/preview")
@@ -89,3 +85,11 @@ def model_status() -> ModelStatus:
     if MODEL is None:
         return {"trained": False, "trained_at": None, "metrics": None}
     return {"trained": True, "trained_at": MODEL["trained_at"], "metrics": MODEL["metrics"]}
+
+
+@app.post("/predict")
+def predict(data: FeatureVectorChurn | list[FeatureVectorChurn]) -> list[PredictionResponseChurn]:
+    if MODEL is None:
+        raise HTTPException(503, "model is not trained, call POST /model/train")
+    rows = data if isinstance(data, list) else [data]
+    return predict_churn(MODEL["pipeline"], rows)

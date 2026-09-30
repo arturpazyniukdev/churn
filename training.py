@@ -9,7 +9,8 @@ from sklearn.metrics import accuracy_score, f1_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from preprocessing import CATEGORICAL_COLUMNS, NUMERIC_COLUMNS
+from models import FeatureVectorChurn
+from preprocessing import CATEGORICAL_COLUMNS, NUMERIC_COLUMNS, to_dataframe
 
 MODEL_PATH = Path("output/churn_model.joblib")
 
@@ -52,3 +53,13 @@ def evaluate(pipeline: Pipeline, X_test: pd.DataFrame, y_test: pd.Series) -> dic
         "accuracy": round(accuracy_score(y_test, y_pred), 2),
         "f1": round(f1_score(y_test, y_pred), 2),
     }
+
+
+def predict_churn(pipeline: Pipeline, rows: list[FeatureVectorChurn]) -> list[dict]:
+    df = to_dataframe(rows)
+    classes = pipeline.predict(df)
+    probas = pipeline.predict_proba(df)
+    return [
+        {"churn": int(c), "probabilities": {0: float(p[0]), 1: float(p[1])}}
+        for c, p in zip(classes, probas)
+    ]
