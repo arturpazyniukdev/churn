@@ -14,11 +14,14 @@ NUMERIC_COLUMNS = [
 
 CATEGORICAL_COLUMNS = ["region", "device_type", "payment_method"]
 
+FEATURE_COLUMNS = NUMERIC_COLUMNS + CATEGORICAL_COLUMNS
+
 TARGET = "churn"
 
 
 def to_dataframe(rows: list[DatasetRowChurn]) -> pd.DataFrame:
-    return pd.DataFrame([row.model_dump() for row in rows])
+    df = pd.DataFrame([row.model_dump() for row in rows])
+    return df[[c for c in FEATURE_COLUMNS + [TARGET] if c in df.columns]]
 
 
 def prepare_data(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:

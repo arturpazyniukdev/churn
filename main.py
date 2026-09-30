@@ -113,3 +113,10 @@ def predict(data: FeatureVectorChurn | list[FeatureVectorChurn]) -> list[Predict
         raise HTTPException(503, "model is not trained, call POST /model/train")
     rows = data if isinstance(data, list) else [data]
     return predict_churn(MODEL["pipeline"], rows)
+
+
+@app.get("/model/schema")
+def model_schema() -> dict[str, str]:
+    return {
+        name: field.annotation.__name__ for name, field in FeatureVectorChurn.model_fields.items()
+    }
