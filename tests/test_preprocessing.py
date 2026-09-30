@@ -1,5 +1,5 @@
-from models import DatasetRowChurn
-from preprocessing import FEATURE_COLUMNS, TARGET, prepare_data, split_data, to_dataframe
+from ml.preprocessing import FEATURE_COLUMNS, TARGET, prepare_data, split_data, to_dataframe
+from schemas import DatasetRowChurn
 
 
 def make_rows(n: int) -> list[DatasetRowChurn]:

@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from models import DatasetRowChurn
+from schemas import DatasetRowChurn
 
 NUMERIC_COLUMNS = [
     "monthly_fee",

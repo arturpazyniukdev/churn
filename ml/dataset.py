@@ -1,9 +1,8 @@
 import csv
 from pathlib import Path
 
-from models import DatasetRowChurn
-
-DATA_PATH = Path("data/churn_dataset.csv")
+from core.config import DATA_PATH
+from schemas import DatasetRowChurn
 
 
 def load_dataset(path: Path = DATA_PATH) -> list[DatasetRowChurn]:

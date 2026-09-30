@@ -1,9 +1,8 @@
 import json
 from pathlib import Path
 
-from models import TrainingRecord
-
-HISTORY_PATH = Path("output/training_history.json")
+from core.config import HISTORY_PATH
+from schemas import TrainingRecord
 
 
 def load_history(path: Path | None = None) -> list[TrainingRecord]:

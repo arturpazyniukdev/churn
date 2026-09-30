@@ -1,7 +1,13 @@
-from models import FeatureVectorChurn, TrainingConfigChurn
-from preprocessing import prepare_data, to_dataframe
+from ml.preprocessing import prepare_data, to_dataframe
+from ml.training import (
+    evaluate,
+    load_churn_model,
+    predict_churn,
+    save_churn_model,
+    train_churn_model,
+)
+from schemas import FeatureVectorChurn, TrainingConfigChurn
 from tests.test_preprocessing import make_rows
-from training import evaluate, load_churn_model, predict_churn, save_churn_model, train_churn_model
 
 
 def _trained():

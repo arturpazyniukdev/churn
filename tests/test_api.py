@@ -1,9 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 
-import history
-import main
-import training
+from core import state
+from main import app
+from ml import history, training
 from tests.test_preprocessing import make_rows
 
 
@@ -11,13 +11,14 @@ from tests.test_preprocessing import make_rows
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(training, "MODEL_PATH", tmp_path / "m.joblib")
     monkeypatch.setattr(history, "HISTORY_PATH", tmp_path / "h.json")
-    monkeypatch.setattr(main, "DATASET", make_rows(40))
-    monkeypatch.setattr(main, "MODEL", None)
-    return TestClient(main.app)
+    monkeypatch.setattr(state, "DATASET", make_rows(40))
+    monkeypatch.setattr(state, "MODEL", None)
+
+    return TestClient(app)
 
 
 def test_dataset_csv_loads():
-    from dataset import load_dataset
+    from ml.dataset import load_dataset
 
     rows = load_dataset()
     assert len(rows) > 0
@@ -55,7 +56,7 @@ def test_predict_bad_body(client):
 
 
 def test_train_empty_dataset(client, monkeypatch):
-    monkeypatch.setattr(main, "DATASET", [])
+    monkeypatch.setattr(state, "DATASET", [])
     r = client.post("/model/train")
     assert r.status_code == 400
     assert r.json()["message"] == "dataset is empty"

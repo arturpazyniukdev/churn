@@ -10,10 +10,9 @@ from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from models import FeatureVectorChurn, TrainingConfigChurn
-from preprocessing import CATEGORICAL_COLUMNS, NUMERIC_COLUMNS, to_dataframe
-
-MODEL_PATH = Path("output/churn_model.joblib")
+from core.config import MODEL_PATH
+from ml.preprocessing import CATEGORICAL_COLUMNS, NUMERIC_COLUMNS, to_dataframe
+from schemas import FeatureVectorChurn, TrainingConfigChurn
 
 ESTIMATORS = {"logreg": LogisticRegression, "random_forest": RandomForestClassifier}
 
