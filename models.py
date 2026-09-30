@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -61,6 +62,8 @@ class ModelStatus(BaseModel):
     trained: bool
     trained_at: datetime | None
     metrics: dict[str, float] | None
+    model_type: str | None
+    hyperparameters: dict[str, Any] | None
 
 
 class PredictionResponseChurn(BaseModel):
@@ -69,3 +72,8 @@ class PredictionResponseChurn(BaseModel):
     )
     churn: int
     probabilities: dict[int, float]
+
+
+class TrainingConfigChurn(BaseModel):
+    model_type: Literal["logreg", "random_forest"] = "logreg"
+    hyperparameters: dict[str, Any] = {}

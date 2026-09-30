@@ -10,6 +10,7 @@ from models import (
     ModelStatus,
     PredictionResponseChurn,
     SplitInfo,
+    TrainingConfigChurn,
     TrainResult,
 )
 from preprocessing import prepare_data, split_data, to_dataframe
@@ -62,15 +63,22 @@ def dataset_split_info() -> SplitInfo:
 
 
 @app.post("/model/train")
-def model_train() -> TrainResult:
+def model_train(config: TrainingConfigChurn | None = None) -> TrainResult:
     global MODEL
+
+    if config is None:
+        config = TrainingConfigChurn()
 
     ensure_dataset()
     X, y = prepare_data(to_dataframe(DATASET))
     X_train, X_test, y_train, y_test = split_data(X, y)
-    pipeline = train_churn_model(X_train, y_train)
+    try:
+        pipeline = train_churn_model(X_train, y_train, config)
+    except (TypeError, ValueError) as e:
+        raise HTTPException(422, f"bad hyperparameters: {e}")
+
     metrics = evaluate(pipeline, X_test, y_test)
-    MODEL = save_churn_model(pipeline, metrics)
+    MODEL = save_churn_model(pipeline, metrics, config)
 
     return {
         "train_size": len(X_train),
@@ -83,8 +91,20 @@ def model_train() -> TrainResult:
 @app.get("/model/status")
 def model_status() -> ModelStatus:
     if MODEL is None:
-        return {"trained": False, "trained_at": None, "metrics": None}
-    return {"trained": True, "trained_at": MODEL["trained_at"], "metrics": MODEL["metrics"]}
+        return {
+            "trained": False,
+            "trained_at": None,
+            "metrics": None,
+            "model_type": None,
+            "hyperparameters": None,
+        }
+    return {
+        "trained": True,
+        "trained_at": MODEL["trained_at"],
+        "metrics": MODEL["metrics"],
+        "model_type": MODEL["model_type"],
+        "hyperparameters": MODEL["hyperparameters"],
+    }
 
 
 @app.post("/predict")
