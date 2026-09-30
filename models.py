@@ -22,3 +22,10 @@ class DatasetInfo(BaseModel):
     columns_count: int
     feature_names: list[str]
     churn_by_class: dict[int, int]
+
+
+class SplitInfo(BaseModel):
+    train_size: int
+    test_size: int
+    train_churn_by_class: dict[int, int]
+    test_churn_by_class: dict[int, int]
