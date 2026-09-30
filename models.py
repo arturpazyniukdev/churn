@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -36,3 +38,9 @@ class TrainResult(BaseModel):
     test_size: int
     accuracy: float
     f1: float
+
+
+class ModelStatus(BaseModel):
+    trained: bool
+    trained_at: datetime | None
+    metrics: dict[str, float] | None

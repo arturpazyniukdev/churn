@@ -3,14 +3,22 @@ from collections import Counter
 from fastapi import FastAPI, HTTPException
 
 from dataset import load_dataset
-from models import DatasetInfo, DatasetRowChurn, FeatureVectorChurn, SplitInfo, TrainResult
+from models import (
+    DatasetInfo,
+    DatasetRowChurn,
+    FeatureVectorChurn,
+    ModelStatus,
+    SplitInfo,
+    TrainResult,
+)
 from preprocessing import prepare_data, split_data, to_dataframe
-from training import evaluate, train_churn_model
+from training import evaluate, load_churn_model, save_churn_model, train_churn_model
 
 app = FastAPI()
 
 
 DATASET = load_dataset()
+MODEL = load_churn_model()  # dict | None
 
 
 def ensure_dataset() -> None:
@@ -59,15 +67,25 @@ def dataset_split_info() -> SplitInfo:
 
 @app.post("/model/train")
 def model_train() -> TrainResult:
+    global MODEL
+
     ensure_dataset()
     X, y = prepare_data(to_dataframe(DATASET))
     X_train, X_test, y_train, y_test = split_data(X, y)
     pipeline = train_churn_model(X_train, y_train)
     metrics = evaluate(pipeline, X_test, y_test)
+    MODEL = save_churn_model(pipeline, metrics)
 
     return {
         "train_size": len(X_train),
         "test_size": len(X_test),
-        "accuracy": round(metrics["accuracy"], 2),
-        "f1": round(metrics["f1"], 2),
+        "accuracy": metrics["accuracy"],
+        "f1": metrics["f1"],
     }
+
+
+@app.get("/model/status")
+def model_status() -> ModelStatus:
+    if MODEL is None:
+        return {"trained": False, "trained_at": None, "metrics": None}
+    return {"trained": True, "trained_at": MODEL["trained_at"], "metrics": MODEL["metrics"]}
