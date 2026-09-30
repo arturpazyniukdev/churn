@@ -29,3 +29,10 @@ class SplitInfo(BaseModel):
     test_size: int
     train_churn_by_class: dict[int, int]
     test_churn_by_class: dict[int, int]
+
+
+class TrainResult(BaseModel):
+    train_size: int
+    test_size: int
+    accuracy: float
+    f1: float

@@ -1,15 +1,21 @@
 from collections import Counter
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 from dataset import load_dataset
-from models import DatasetInfo, DatasetRowChurn, FeatureVectorChurn, SplitInfo
+from models import DatasetInfo, DatasetRowChurn, FeatureVectorChurn, SplitInfo, TrainResult
 from preprocessing import prepare_data, split_data, to_dataframe
+from training import evaluate, train_churn_model
 
 app = FastAPI()
 
 
 DATASET = load_dataset()
+
+
+def ensure_dataset() -> None:
+    if len(DATASET) == 0:
+        raise HTTPException(status_code=400, detail="dataset is empty")
 
 
 @app.get("/")
@@ -39,14 +45,29 @@ def dataset_info() -> DatasetInfo:
 
 @app.get("/dataset/split-info")
 def dataset_split_info() -> SplitInfo:
+    ensure_dataset()
     X, y = prepare_data(to_dataframe(DATASET))
     X_train, X_test, y_train, y_test = split_data(X, y)
-
-    print(len(X_test))
 
     return {
         "train_size": len(X_train),
         "test_size": len(X_test),
         "train_churn_by_class": Counter(y_train),
         "test_churn_by_class": Counter(y_test),
+    }
+
+
+@app.post("/model/train")
+def model_train() -> TrainResult:
+    ensure_dataset()
+    X, y = prepare_data(to_dataframe(DATASET))
+    X_train, X_test, y_train, y_test = split_data(X, y)
+    pipeline = train_churn_model(X_train, y_train)
+    metrics = evaluate(pipeline, X_test, y_test)
+
+    return {
+        "train_size": len(X_train),
+        "test_size": len(X_test),
+        "accuracy": round(metrics["accuracy"], 2),
+        "f1": round(metrics["f1"], 2),
     }
