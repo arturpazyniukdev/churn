@@ -91,3 +91,9 @@ class TrainingRecord(BaseModel):
     model_type: str
     hyperparameters: dict[str, Any]
     metrics: dict[str, float]
+
+
+class HealthStatus(BaseModel):
+    status: str
+    model_loaded: bool
+    dataset_loaded: bool

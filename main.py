@@ -1,3 +1,4 @@
+import logging
 from collections import Counter
 
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -11,6 +12,7 @@ from models import (
     DatasetRowChurn,
     ErrorResponse,
     FeatureVectorChurn,
+    HealthStatus,
     ModelStatus,
     PredictionResponseChurn,
     SplitInfo,
@@ -21,11 +23,16 @@ from models import (
 from preprocessing import prepare_data, split_data, to_dataframe
 from training import evaluate, load_churn_model, predict_churn, save_churn_model, train_churn_model
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+log = logging.getLogger("churn")
+
 app = FastAPI()
 
 
 DATASET = load_dataset()
-MODEL = load_churn_model()  # dict | None
+log.info("dataset loaded: %d rows", len(DATASET))
+
+MODEL = load_churn_model()
 
 
 def ensure_dataset() -> None:
@@ -89,6 +96,7 @@ def model_train(config: TrainingConfigChurn | None = None) -> TrainResult:
         raise HTTPException(422, f"bad hyperparameters: {e}")
 
     metrics = evaluate(pipeline, X_test, y_test)
+    log.info("model trained: %s %s metrics=%s", config.model_type, config.hyperparameters, metrics)
     MODEL = save_churn_model(pipeline, metrics, config)
     append_record(
         TrainingRecord(
@@ -148,6 +156,7 @@ def predict(data: FeatureVectorChurn | list[FeatureVectorChurn]) -> list[Predict
     if MODEL is None:
         raise HTTPException(503, "model is not trained, call POST /model/train")
     rows = data if isinstance(data, list) else [data]
+    log.info("predict: %d rows", len(rows))
     return predict_churn(MODEL["pipeline"], rows)
 
 
@@ -155,6 +164,15 @@ def predict(data: FeatureVectorChurn | list[FeatureVectorChurn]) -> list[Predict
 def model_schema() -> dict[str, str]:
     return {
         name: field.annotation.__name__ for name, field in FeatureVectorChurn.model_fields.items()
+    }
+
+
+@app.get("/health")
+def health() -> HealthStatus:
+    return {
+        "status": "ok" if MODEL is not None and DATASET else "degraded",
+        "model_loaded": MODEL is not None,
+        "dataset_loaded": len(DATASET) > 0,
     }
 
 
@@ -167,14 +185,17 @@ def error_response(status: int, code: str, message: str, details=None) -> JSONRe
 
 @app.exception_handler(HTTPException)
 def http_exception_handler(request: Request, exc: HTTPException):
+    log.warning("http error %d: %s", exc.status_code, exc.detail)
     return error_response(exc.status_code, "http_error", exc.detail)
 
 
 @app.exception_handler(RequestValidationError)
 def validation_handler(request: Request, exc: RequestValidationError):
+    log.warning("validation error: %s", exc.errors())
     return error_response(422, "validation_error", "invalid request data", details=exc.errors())
 
 
 @app.exception_handler(Exception)
 def unhandled_handler(request: Request, exc: Exception):
+    log.exception("unhandled error")
     return error_response(500, "internal_error", "unexpected server error", details=str(exc))
