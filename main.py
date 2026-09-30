@@ -1,11 +1,14 @@
 from collections import Counter
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from dataset import load_dataset
 from models import (
     DatasetInfo,
     DatasetRowChurn,
+    ErrorResponse,
     FeatureVectorChurn,
     ModelStatus,
     PredictionResponseChurn,
@@ -62,7 +65,13 @@ def dataset_split_info() -> SplitInfo:
     }
 
 
-@app.post("/model/train")
+@app.post(
+    "/model/train",
+    responses={
+        400: {"model": ErrorResponse, "description": "dataset is empty"},
+        422: {"model": ErrorResponse, "description": "bad config or hyperparameters"},
+    },
+)
 def model_train(config: TrainingConfigChurn | None = None) -> TrainResult:
     global MODEL
 
@@ -107,7 +116,13 @@ def model_status() -> ModelStatus:
     }
 
 
-@app.post("/predict")
+@app.post(
+    "/predict",
+    responses={
+        422: {"model": ErrorResponse, "description": "invalid features"},
+        503: {"model": ErrorResponse, "description": "model not trained"},
+    },
+)
 def predict(data: FeatureVectorChurn | list[FeatureVectorChurn]) -> list[PredictionResponseChurn]:
     if MODEL is None:
         raise HTTPException(503, "model is not trained, call POST /model/train")
@@ -120,3 +135,25 @@ def model_schema() -> dict[str, str]:
     return {
         name: field.annotation.__name__ for name, field in FeatureVectorChurn.model_fields.items()
     }
+
+
+def error_response(status: int, code: str, message: str, details=None) -> JSONResponse:
+    return JSONResponse(
+        status_code=status,
+        content=ErrorResponse(code=code, message=message, details=details).model_dump(),
+    )
+
+
+@app.exception_handler(HTTPException)
+def http_exception_handler(request: Request, exc: HTTPException):
+    return error_response(exc.status_code, "http_error", exc.detail)
+
+
+@app.exception_handler(RequestValidationError)
+def validation_handler(request: Request, exc: RequestValidationError):
+    return error_response(422, "validation_error", "invalid request data", details=exc.errors())
+
+
+@app.exception_handler(Exception)
+def unhandled_handler(request: Request, exc: Exception):
+    return error_response(500, "internal_error", "unexpected server error", details=str(exc))

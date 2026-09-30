@@ -77,3 +77,9 @@ class PredictionResponseChurn(BaseModel):
 class TrainingConfigChurn(BaseModel):
     model_type: Literal["logreg", "random_forest"] = "logreg"
     hyperparameters: dict[str, Any] = {}
+
+
+class ErrorResponse(BaseModel):
+    code: str
+    message: str
+    details: Any | None = None
