@@ -1,10 +1,11 @@
 from collections import Counter
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from dataset import load_dataset
+from history import append_record, load_history
 from models import (
     DatasetInfo,
     DatasetRowChurn,
@@ -14,6 +15,7 @@ from models import (
     PredictionResponseChurn,
     SplitInfo,
     TrainingConfigChurn,
+    TrainingRecord,
     TrainResult,
 )
 from preprocessing import prepare_data, split_data, to_dataframe
@@ -88,12 +90,21 @@ def model_train(config: TrainingConfigChurn | None = None) -> TrainResult:
 
     metrics = evaluate(pipeline, X_test, y_test)
     MODEL = save_churn_model(pipeline, metrics, config)
+    append_record(
+        TrainingRecord(
+            trained_at=MODEL["trained_at"],
+            model_type=MODEL["model_type"],
+            hyperparameters=MODEL["hyperparameters"],
+            metrics=metrics,
+        )
+    )
 
     return {
         "train_size": len(X_train),
         "test_size": len(X_test),
         "accuracy": metrics["accuracy"],
         "f1": metrics["f1"],
+        "roc_auc": metrics["roc_auc"],
     }
 
 
@@ -114,6 +125,16 @@ def model_status() -> ModelStatus:
         "model_type": MODEL["model_type"],
         "hyperparameters": MODEL["hyperparameters"],
     }
+
+
+@app.get("/model/metrics")
+def model_metrics(
+    limit: int = Query(1, ge=1), model_type: str | None = None
+) -> list[TrainingRecord]:
+    history = load_history()
+    if model_type:
+        history = [r for r in history if r.model_type == model_type]
+    return history[-limit:]
 
 
 @app.post(

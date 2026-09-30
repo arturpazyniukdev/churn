@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
@@ -64,9 +64,11 @@ def train_churn_model(
 
 def evaluate(pipeline: Pipeline, X_test: pd.DataFrame, y_test: pd.Series) -> dict[str, float]:
     y_pred = pipeline.predict(X_test)
+    proba = pipeline.predict_proba(X_test)[:, 1]
     return {
         "accuracy": round(accuracy_score(y_test, y_pred), 2),
         "f1": round(f1_score(y_test, y_pred), 2),
+        "roc_auc": round(roc_auc_score(y_test, proba), 2),
     }
 
 

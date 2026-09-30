@@ -56,6 +56,7 @@ class TrainResult(BaseModel):
     test_size: int
     accuracy: float
     f1: float
+    roc_auc: float
 
 
 class ModelStatus(BaseModel):
@@ -83,3 +84,10 @@ class ErrorResponse(BaseModel):
     code: str
     message: str
     details: Any | None = None
+
+
+class TrainingRecord(BaseModel):
+    trained_at: datetime
+    model_type: str
+    hyperparameters: dict[str, Any]
+    metrics: dict[str, float]
