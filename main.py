@@ -1,24 +1,14 @@
+from collections import Counter
+
 from fastapi import FastAPI
-from pydantic import BaseModel
 
-
-class FeatureVectorChurn(BaseModel):
-    monthly_fee: float
-    usage_hours: float
-    support_requests: int
-    account_age_months: int
-    failed_payments: int
-    region: str
-    device_type: str
-    payment_method: str
-    autopay_enabled: int
-
-
-class DatasetRowChurn(FeatureVectorChurn):
-    churn: int
-
+from dataset import load_dataset
+from models import DatasetInfo, DatasetRowChurn, FeatureVectorChurn
 
 app = FastAPI()
+
+
+DATASET = load_dataset()
 
 
 @app.get("/")
@@ -29,3 +19,18 @@ def root():
 @app.post("/predict")
 def predict(data: FeatureVectorChurn) -> FeatureVectorChurn:
     return data
+
+
+@app.get("/dataset/preview")
+def dataset_preview(n: int = 10) -> list[DatasetRowChurn]:
+    return DATASET[:n]
+
+
+@app.get("/dataset/info")
+def dataset_info() -> DatasetInfo:
+    return {
+        "rows_count": len(DATASET),
+        "columns_count": len(DatasetRowChurn.model_fields),
+        "feature_names": list(FeatureVectorChurn.model_fields),
+        "churn_by_class": Counter(row.churn for row in DATASET),
+    }
